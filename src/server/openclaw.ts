@@ -122,6 +122,26 @@ let inMemoryExperimentEvents: ExperimentEvent[] = [
   },
 ];
 
+// ── BDNHOST: simple JSON persistence so approvals/events survive restarts ──
+import * as fsPersist from 'fs';
+const STATE_FILE = process.env.OPENCLAW_STATE_FILE || '';
+function persistState() {
+  if (!STATE_FILE) return;
+  try {
+    fsPersist.writeFileSync(STATE_FILE + '.tmp', JSON.stringify({ approvals: inMemoryApprovals, events: inMemoryExperimentEvents, webhooks: inMemoryWebhooks }, null, 1));
+    fsPersist.renameSync(STATE_FILE + '.tmp', STATE_FILE);
+  } catch (e) { console.error('persistState failed', e); }
+}
+(function loadState() {
+  if (!STATE_FILE || !fsPersist.existsSync(STATE_FILE)) return;
+  try {
+    const st = JSON.parse(fsPersist.readFileSync(STATE_FILE, 'utf-8'));
+    if (Array.isArray(st.approvals)) inMemoryApprovals = st.approvals;
+    if (Array.isArray(st.events)) inMemoryExperimentEvents = st.events;
+    if (Array.isArray(st.webhooks)) inMemoryWebhooks = st.webhooks;
+  } catch (e) { console.error('loadState failed', e); }
+})();
+
 // Helper to set stored ideas from main server
 export function setOpenClawIdeas(ideas: any[]) {
   inMemoryIdeas = ideas;
@@ -513,6 +533,7 @@ openclawRouter.post('/approvals/create', (req: Request, res: Response) => {
   };
 
   inMemoryApprovals.unshift(newApproval);
+  persistState();
   res.status(201).json(newApproval);
 });
 
@@ -544,6 +565,7 @@ openclawRouter.post('/approvals/:id/review', (req: Request, res: Response) => {
     actor: 'human_user',
   });
 
+  persistState();
   res.json({
     status: 'success',
     approval: item,
@@ -571,6 +593,7 @@ openclawRouter.post('/experiments/log', (req: Request, res: Response) => {
   };
 
   inMemoryExperimentEvents.unshift(newEvent);
+  persistState();
   res.status(201).json(newEvent);
 });
 
@@ -595,6 +618,7 @@ openclawRouter.post('/webhooks/register', (req: Request, res: Response) => {
   };
 
   inMemoryWebhooks.push(webhook);
+  persistState();
   res.status(201).json(webhook);
 });
 

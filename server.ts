@@ -26,6 +26,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// BDNHOST: human-in-the-loop gate — only a human authenticated by nginx (basic auth → X-Remote-User)
+// may approve/reject. Direct calls (e.g. from the agent on localhost) are refused.
+app.use('/api/openclaw/approvals/:id/review', (req, res, next) => {
+  if (!req.get('x-remote-user')) {
+    return res.status(403).json({ error: 'Approval decisions require an authenticated human (via the web UI).' });
+  }
+  next();
+});
+
 // Mount OpenClaw sync & API routes
 app.use('/api/openclaw', openclawRouter);
 
@@ -759,7 +768,7 @@ async function startServer() {
     });
   }
 
-  app.listen(port, () => {
+  app.listen(Number(port), process.env.HOST || '127.0.0.1', () => {
     console.log(`Server listening on http://localhost:${port}`);
   });
 }
