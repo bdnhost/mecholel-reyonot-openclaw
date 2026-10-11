@@ -1,0 +1,6 @@
+{
+  "name": "מחולל רעיונות OpenClaw",
+  "description": "מחולל רעיונות עסקיים ותוכניות אימות ממוקדות לשירותי אוטומציה עם OpenClaw",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

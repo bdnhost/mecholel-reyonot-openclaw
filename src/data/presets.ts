@@ -1,0 +1,117 @@
+import { UserProfileInput } from '../types';
+
+export interface PresetProfile {
+  id: string;
+  name: string;
+  badge: string;
+  description: string;
+  data: UserProfileInput;
+}
+
+export const PRESET_PROFILES: PresetProfile[] = [
+  {
+    id: 'marketing',
+    name: 'יועץ שיווק וסוכנות דיגיטל',
+    badge: 'שיווק ולידים',
+    description: 'מכיר סוכנויות PPC, עסקים מקומיים המפרסמים מודעות, ומתמודד עם זמני מענה איטיים ללידים.',
+    data: {
+      professionField: 'marketing',
+      customField: 'סוכנות פרסום ושיווק ממומן',
+      targetClients: 'סוכנויות דיגיטל, נותני שירותי פרימיום ועסקים עם קמפיינים פעילים',
+      sellableSkills: ['לידים ומכירות', 'אוטומציה ואינטגרציות', 'דוחות וניתוח נתונים'],
+      recurringProcesses: 'קליטת לידים מפייסבוק/גוגל, סינון טלפוני ראשוני, כתיבת דוחות לקוח שבועיים',
+      clientAccess: 'exists',
+      weeklyHours: '10-20',
+      budget: '100-500',
+      businessModel: 'retainer',
+      validationDays: 14,
+      languageRegion: 'israel',
+      excludedAreas: 'תחומים פיננסיים מפוקחים, ספאם לא מאושר',
+      dataSensitivity: 'standard',
+    },
+  },
+  {
+    id: 'real_estate',
+    name: 'מנהל תפעול ונדל״ן',
+    badge: 'תיווך ונדל״ן',
+    description: 'עובד עם סוכני נדל"ן ומשרדי תיווך, מזהה פספוס של קונים קיימים בעת כניסת נכס חדש.',
+    data: {
+      professionField: 'real_estate',
+      customField: 'משרדי תיווך ויזמי נדל״ן מקומיים',
+      targetClients: 'משרדי תיווך נדל"ן (5-20 סוכנים), מנהלי מכירות פרויקטים',
+      sellableSkills: ['ניהול מסמכים וחוזים', 'אוטומציה ואינטגרציות', 'תפעול יומיומי'],
+      recurringProcesses: 'הצלבת נכסים חדשים מול קונים ותיקים, איסוף מסמכי נכס, תיאום סיורים',
+      clientAccess: 'exists',
+      weeklyHours: '10-20',
+      budget: '100-500',
+      businessModel: 'one_off_service',
+      validationDays: 7,
+      languageRegion: 'israel',
+      excludedAreas: 'ייעוץ משפטי ישיר, חתימות סופיות ללא עו"ד',
+      dataSensitivity: 'sensitive',
+    },
+  },
+  {
+    id: 'operations_crm',
+    name: 'מומחה אוטומציה ותפעול עסקי',
+    badge: 'אופרציה ו-CRM',
+    description: 'מייעל תהליכים בעסקים קטנים-בינוניים, הטמעת Make/Monday וחיבור מערכות ארגוניות.',
+    data: {
+      professionField: 'operations',
+      customField: 'יועץ מערכות מידע ותפעול SMB',
+      targetClients: 'חברות שירותים, מפיצים, ספקי B2B עם 5-30 עובדים',
+      sellableSkills: ['אוטומציה ואינטגרציות', 'דוחות וניתוח נתונים', 'תפעול יומיומי'],
+      recurringProcesses: 'הזנת הזמנות מסמכי PDF ל-ERP, הפקת הצעות מחיר חוזרות, טיפול בחשבוניות ספקים',
+      clientAccess: 'partial',
+      weeklyHours: '10-20',
+      budget: '100-500',
+      businessModel: 'productized_service',
+      validationDays: 14,
+      languageRegion: 'israel',
+      excludedAreas: 'העברות בנקאיות אוטומטיות, כרטיסי אשראי',
+      dataSensitivity: 'sensitive',
+    },
+  },
+  {
+    id: 'legal_accounting',
+    name: 'מנהל משרד עו״ד ורו״ח',
+    badge: 'מקצועות חופשיים',
+    description: 'מכיר את השגרה המייגעת של איסוף חומרים מלקוחות, קבלות, חשבוניות וטפסי פתיחת תיק.',
+    data: {
+      professionField: 'legal_accounting',
+      customField: 'משרדי רואי חשבון ויועצי מס',
+      targetClients: 'רואי חשבון עצמאיים, משרדי ייעוץ מס, עורכי דין מסחריים',
+      sellableSkills: ['ניהול מסמכים וחוזים', 'שירות לקוחות ו-FAQ', 'תפעול יומיומי'],
+      recurringProcesses: 'תזכורות לאיסוף חומר חודשי, בדיקת שלמות מסמכים (קבלות חסרות), שאלות חוזרות על מועדי דיווח',
+      clientAccess: 'exists',
+      weeklyHours: '5-10',
+      budget: '100-500',
+      businessModel: 'retainer',
+      validationDays: 14,
+      languageRegion: 'israel',
+      excludedAreas: 'מתן ייעוץ משפטי/חשבונאי מחייב, נתוני שכר סודיים ללא הרשאה',
+      dataSensitivity: 'sensitive',
+    },
+  },
+  {
+    id: 'ecommerce',
+    name: 'מומחה איקומרס וסחר מקוון',
+    badge: 'מסחר אלקטרוני',
+    description: 'חי את עולם ה-Shopify, שירות הלקוחות, ניהול החזרות ומעקב אחר מתחרים.',
+    data: {
+      professionField: 'ecommerce',
+      customField: 'חנויות שופיפיי ומותגי D2C ישראליים',
+      targetClients: 'חנויות איקומרס עצמאיות עם 100-1,000 הזמנות בחודש',
+      sellableSkills: ['שירות לקוחות ו-FAQ', 'דוחות וניתוח נתונים', 'אוטומציה ואינטגרציות'],
+      recurringProcesses: 'מענה לשאלות סטטוס משלוח, טיפול בבקשות החלפה/ביטול, מעקב מבצעי מתחרים',
+      clientAccess: 'partial',
+      weeklyHours: '10-20',
+      budget: '100-500',
+      businessModel: 'productized_service',
+      validationDays: 7,
+      languageRegion: 'israel',
+      excludedAreas: 'חיובים ישירים, סליקה ללא אישור',
+      dataSensitivity: 'standard',
+    },
+  },
+];
