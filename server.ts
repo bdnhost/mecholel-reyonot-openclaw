@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import { openclawRouter, setOpenClawIdeas } from './src/server/openclaw.ts';
 
 dotenv.config();
@@ -11,6 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', 'loopback'); // BDNHOST: behind nginx → correct https URLs in openapi.json
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -26,21 +27,51 @@ app.use((req, res, next) => {
   next();
 });
 
+// BDNHOST: human-in-the-loop gate — only a human authenticated by nginx (basic auth → X-Remote-User)
+// may approve/reject. Direct calls (e.g. from the agent on localhost) are refused.
+app.use('/api/openclaw/approvals/:id/review', (req, res, next) => {
+  if (!req.get('x-remote-user')) {
+    return res.status(403).json({ error: 'Approval decisions require an authenticated human (via the web UI).' });
+  }
+  next();
+});
+
 // Mount OpenClaw sync & API routes
 app.use('/api/openclaw', openclawRouter);
 
-// Initialize Gemini client if API key is provided
-const apiKey = process.env.GEMINI_API_KEY;
-let aiClient: GoogleGenAI | null = null;
-if (apiKey) {
-  aiClient = new GoogleGenAI({
-    apiKey: apiKey,
-    httpOptions: {
-      headers: {
-        'User-Agent': 'aistudio-build',
-      },
-    },
+// BDNHOST: LLM provider = DeepSeek (OpenAI-compatible) instead of Gemini.
+const deepseekKey = process.env.DEEPSEEK_API_KEY;
+const deepseekModel = process.env.DEEPSEEK_MODEL || 'deepseek-flash';
+const aiClient = deepseekKey ? { provider: 'deepseek' } : null;
+const apiKey = deepseekKey; // keeps /api/health "hasGeminiKey" semantics (= LLM available)
+
+async function llmJSON(system: string, prompt: string, temperature = 0.7): Promise<any> {
+  const r = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${deepseekKey}` },
+    body: JSON.stringify({
+      model: deepseekModel,
+      temperature,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system + '\nהחזר אך ורק אובייקט JSON תקין, ללא טקסט נוסף.' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+    signal: AbortSignal.timeout(120000),
   });
+  if (!r.ok) throw new Error(`DeepSeek HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const data: any = await r.json();
+  const raw: string = data.choices?.[0]?.message?.content || '{}';
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Repair common LLM JSON issues: invalid backslash escapes (e.g. Hebrew gershayim) and code fences.
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '')
+      .replace(/\\(?!["\\/bfnrtu])/g, '');
+    return JSON.parse(cleaned);
+  }
 }
 
 // Health check endpoint
@@ -609,30 +640,21 @@ app.post('/api/generate-ideas', async (req, res) => {
     if (aiClient) {
       try {
         const prompt = buildPrompt(userInput);
-        const response = await aiClient.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: ideaResponseSchema,
-            temperature: 0.7,
-            systemInstruction:
-              'אתה מומחה לאסטרטגיה עסקית, ייעול תהליכים ומכירת שירותי אוטומציה מבוססי AI. כתוב בעברית מקצועית, שקופה, ללא הייפ וללא הבטחות כוזבות. עקוב במדויק אחר הנחיות ה-PRD.',
-          },
-        });
-
-        if (response.text) {
-          const parsed = JSON.parse(response.text);
+        const parsed = await llmJSON(
+          'אתה מומחה לאסטרטגיה עסקית, ייעול תהליכים ומכירת שירותי אוטומציה מבוססי AI. כתוב בעברית מקצועית, שקופה, ללא הייפ וללא הבטחות כוזבות. עקוב במדויק אחר הנחיות ה-PRD.',
+          prompt + '\n\nמבנה ה-JSON הנדרש (JSON Schema): ' + JSON.stringify(ideaResponseSchema),
+        );
+        {
           if (parsed && Array.isArray(parsed.ideas) && parsed.ideas.length > 0) {
             setOpenClawIdeas(parsed.ideas);
             return res.json({
-              source: 'gemini',
+              source: 'deepseek',
               ideas: parsed.ideas,
             });
           }
         }
       } catch (geminiError: any) {
-        console.warn('Gemini generation failed, using curated fallback:', geminiError?.message);
+        console.warn('LLM (DeepSeek) generation failed, using curated fallback:', geminiError?.message);
       }
     }
 
@@ -684,20 +706,12 @@ app.post('/api/generate-outreach', async (req, res) => {
   }
 }
 `;
-        const response = await aiClient.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
-
-        if (response.text) {
-          const parsed = JSON.parse(response.text);
+        const parsed = await llmJSON('אתה מומחה למכירות B2B ואימות לקוחות. כתוב בעברית מקצועית ומכבדת.', prompt);
+        if (parsed && parsed.whatsappMessage) {
           return res.json(parsed);
         }
       } catch (err) {
-        console.warn('Gemini outreach generation fallback:', err);
+        console.warn('LLM (DeepSeek) outreach fallback:', err);
       }
     }
 
@@ -759,7 +773,7 @@ async function startServer() {
     });
   }
 
-  app.listen(port, () => {
+  app.listen(Number(port), process.env.HOST || '127.0.0.1', () => {
     console.log(`Server listening on http://localhost:${port}`);
   });
 }
